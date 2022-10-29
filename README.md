@@ -1,4 +1,4 @@
-# Master-thesis-project
+# Should you make the Explicit-duration Hidden Markov model your asset when analysing intensive longitudinal data for behavioral research? 
 
 > Aleksandra Dacko
 ---
