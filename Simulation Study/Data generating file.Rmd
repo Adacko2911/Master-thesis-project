@@ -18,7 +18,7 @@ The feature I will vary are:
 n<-10 #subjects
 n_t<-100 #time series lenght
 m<-3
-n_dep<-1
+n_dep<-2
 # the dependent variable is sadness and the states are depressive, mixed, manic so in depressive state sadness got largest mean
 gamma<-matrix(data=c(0.8,0.1,0.1,
                      0.15,0.7,0.15,
@@ -26,7 +26,10 @@ gamma<-matrix(data=c(0.8,0.1,0.1,
 #let us assume emission is based on the Groningen data so we treat the 1-100 scale as continuous normally distributed. 
 emiss<-list(matrix(data=c(5,1,
                           40,1,
-                          65,1), byrow=T,ncol=2,nrow = m))
+                          65,1), byrow=T,ncol=2,nrow = m),
+            matrix(data=c(10,1,
+                          15,1,
+                          70,1), byrow=T,ncol=2,nrow = m))
 gamma_ss_var<-1
 emiss_ss_var<-1
 gamma[,-1]
@@ -44,6 +47,7 @@ int_to_prob<-function(alfa){
   return(round(gamma,4))
 }
 prob_to_int<-function(gamma){
+  gamma<-gamma+0.00001
   if(is.matrix(gamma)){
     dim<-dim(gamma)
     alfa<-matrix(ncol = dim[2]-1,nrow = dim[1])
@@ -58,26 +62,39 @@ prob_to_int<-function(gamma){
 #little check if I can recover the same probability matrix
 gamma1<-matrix(data=c(0.8,0.1,0.1,
                      0.15,0.7,0.15,
-                     0.05,0.05,0.9),byrow = T, nrow = 2)
+                     0.05,0.05,0.9),byrow = T, nrow = 3)
 prob_to_int(gamma1)
 new<-prob_to_int(gamma1)
 new_gamma<-int_to_prob(new)
 new_gamma
 new_gamma==gamma1
 ```
-We prepare the output object
-```{r}
-output<-list(rep(list(NULL), n), #gamma
-             as.matrix(cbind(rep(1:n, each = n_t),rep(NA,n_t*n))),#states
-             rep(list(vector("list", n_dep)), n),#emiss
-             cbind(rep(1:n, each = n_t),matrix(rep(NA,n_t*n*n_dep), ncol= n_dep) )#observations
-             )
-names(output) <- c("ss_gamma","states", "ss_emiss","observations")
+Here I have created the plot function for dwell time duration
+```{r, warning=FALSE}
+library(ggplot2)
+library(RColorBrewer)
 
-#we probably don't need the dwell time distribution parameters for all subjects since for now we assume that the dwell time is fixed across subjects for each state?
+plot_lognorm<-function(m, means, sd=2){
+  sdlog<-sd
+  meanlog<-sort(means)
+  col<-brewer.pal(m, name='Dark2')
+  data<-density(rlnorm(20000, log(meanlog[1]), log(sdlog)),from=-1,to=150)
+  data<-data.frame(x=data$x,y=data$y)
+  plot<-ggplot(data=data,aes(x=x,y=y))+geom_line(color=col[1],size=1)+theme_minimal()+ylab("density")+xlab("duration distribution")+ggtitle("State dependent lognormal distribution")+xlim(c(0,100))
+  for(s in 2:m){
+    data<-density(rlnorm(20000, log(meanlog[s]), log(sdlog)),from=-1,to=150)
+    data<-data.frame(x=data$x,y=data$y)
+    plot<-plot+geom_line(data=data,aes(x=x,y=y),color=col[s],size=1)
+  }
+  return(plot)
+}
+
+plot_lognorm(m=3,means=c(10,15,40),sd=2.5)
+
 ```
 We start our simulation 
 ```{r}
+set.seed(1234)
 mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var){
   #define output lists
   gamma_ss<-rep(list(NULL), n)
@@ -92,7 +109,7 @@ mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var){
     for(dep in 1:n_dep){
       #generate subject specific means of emission distributions of dependent variables,we introduce random subject-specific effect which is deviation from the mean of normally conditionally distributed mean
       emiss_ss[[subj]][[dep]] <- emiss[[dep]]
-      emiss_ss[[subj]][[dep]][,1]<-matrix(emiss[[n_dep]][,1]+rnorm(n=m,mean = 0,sd=sqrt(emiss_ss_var)),nrow=m)
+      emiss_ss[[subj]][[dep]][,1]<-matrix(emiss[[dep]][,1]+rnorm(n=m,mean = 0,sd=sqrt(emiss_ss_var)),nrow=m)
     }
     #now we want to find a starting state to evaluate the state sequence 
     init <- solve(t(diag(m) - gamma_ss[[subj]] + 1), rep(1, m))
@@ -108,7 +125,7 @@ mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var){
     #for each subject we sample the initial state 
     state_sequence[subj*n_t-n_t+1,2]<-sample(x = 1:m, size = 1, prob = init)
     for(dep in 1:n_dep){
-      obv_ss[subj*n_t-n_t+1,n_dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],2]) )
+      obv_ss[subj*n_t-n_t+1,dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],2]) )
     }
     #now we evaluate the rest of the subject specific observations  
     for(t_occ in 2:n_t){
@@ -117,16 +134,109 @@ mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var){
                                                      gamma_ss[[subj]][state_sequence[subj*n_t-n_t+t_occ-1,2],])
       #for each subject we sample the mean emission 
       for(dep in 1:n_dep){
-      obv_ss[subj*n_t-n_t+t_occ,n_dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],2]) )
+      obv_ss[subj*n_t-n_t+t_occ,dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],2]) )
     }
     }
 }
-  output<-list(gamma_ss,state_sequence,state_sequence,obv_ss)
+  output<-list(gamma_ss,state_sequence,emiss_ss,obv_ss)
   names(output) <- c("gamma_ss","states", "emiss_ss","observations")
   return(output)
 }
 
 mhsmm_sim(n=n,n_t=n_t,m=m,n_dep=n_dep,emiss=emiss,gamma=gamma,gamma_ss_var=gamma_ss_var,emiss_ss_var=emiss_ss_var)
+
+```
+
+
+Now as we got the first version we want to adjust it such that the model now is going to be HSMM.
+First we initiate the input:
+```{r}
+n<-10 #subjects
+n_t<-100 #time series lenght
+m<-3
+n_dep<-2
+# the dependent variable is sadness and the states are depressive, mixed, manic so in depressive state sadness got largest mean
+gamma<-matrix(data=c(0,0.9,0.1,
+                     0.5,0,0.5,
+                     0.2,0.8,0),byrow = T, nrow = m)
+#let us assume emission is based on the Groningen data so we treat the 1-100 scale as continuous normally distributed. 
+emiss<-list(matrix(data=c(5,1,
+                          40,1,
+                          65,1), byrow=T,ncol=2,nrow = m),
+            matrix(data=c(10,1,
+                          15,1,
+                          70,1), byrow=T,ncol=2,nrow = m))
+gamma_ss_var<-1
+emiss_ss_var<-1
+dwell_distr<-matrix(data=c(5,2, #first column represent mean and second variance
+                          20,2, #need to 
+                          30,2), byrow=T,ncol=2,nrow = m)
+```
+
+```{r}
+set.seed(1234)
+mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var,dwell_distr){
+  #define output lists
+  gamma_ss<-rep(list(NULL), n)
+  state_sequence<-as.matrix(cbind(rep(1:n, each = n_t),rep(NA,n_t*n)))
+  emiss_ss<-rep(list(vector("list", n_dep)), n)
+  obv_ss<-cbind(rep(1:n, each = n_t),matrix(rep(NA,n_t*n*n_dep), ncol= n_dep))
+  #change the form of a transition matrix
+  gamma_int<-prob_to_int(gamma)
+  for(subj in 1:n){
+    #generate a set of subject specific transition matrices we introduce random subject-specific effect to the intercepts 
+    gamma_ss[[subj]]<-int_to_prob(gamma_int+rnorm(n=m*(m-1),mean=0,sd=sqrt(gamma_ss_var))) 
+    #the previous step added random effects to all transition matrix entries so we clear once again the diagonal 
+    diag(gamma_ss[[subj]])<-rep(0,m)
+    for(dep in 1:n_dep){
+      #generate subject specific means of emission distributions of dependent variables,we introduce random subject-specific effect which is deviation from the mean of normally conditionally distributed mean
+      emiss_ss[[subj]][[dep]] <- emiss[[dep]]
+      emiss_ss[[subj]][[dep]][,1]<-matrix(emiss[[dep]][,1]+rnorm(n=m,mean = 0,sd=sqrt(emiss_ss_var)),nrow=m)
+    }
+    #now we want to find a starting state to evaluate the state sequence 
+    init <- solve(t(diag(m) - gamma_ss[[subj]] + 1), rep(1, m))
+    #for each subject we sample the initial state 
+    state_sequence[subj*n_t-n_t+1,2]<-sample(x = 1:m, size = 1, prob = init)
+    for(dep in 1:n_dep){
+      obv_ss[subj*n_t-n_t+1,dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],2]) )
+    }
+    ak=0
+    a=0
+    while(ak<n_t){
+      #now we evaluate the dwell time based on first state   
+      dwell_row<-state_sequence[subj*n_t-n_t+a+1,2]
+      mean_dwell<-round(rlnorm(1, log(dwell_distr[dwell_row,1]), log(sqrt(dwell_distr[dwell_row,2]))),0)
+      if(a+mean_dwell<n_t){
+        state_given_dwell<-rep(dwell_row,mean_dwell-1)
+        for (idx in 1:length(state_given_dwell)) {
+            state_sequence[subj*n_t-n_t+1+a+idx,2]<-state_given_dwell[idx]
+        }
+        a<-a+mean_dwell
+        state_sequence[subj*n_t-n_t+a+1,2]<-sample(x = 1:m, size = 1, prob =
+                                  gamma_ss[[subj]][state_sequence[subj*n_t-n_t+a,2],])
+        ak<-a+1
+      }else{
+        mean_dwell<-n_t-a
+        state_given_dwell<-rep(dwell_row,(mean_dwell-1))
+        for (idx in 1:length(state_given_dwell)) {
+            state_sequence[subj*n_t-n_t+1+a+idx,2]<-state_given_dwell[idx]
+        }
+        ak<-a+mean_dwell
+      }
+    }
+      #for each subject and each state we sample the mean emission 
+      for(t_occ in 2:n_t){
+        for(dep in 1:n_dep){
+          obv_ss[subj*n_t-n_t+t_occ,dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],2]) )
+        }
+      }
+}
+  output<-list(gamma_ss,state_sequence,emiss_ss,obv_ss)
+  names(output) <- c("gamma_ss","states", "emiss_ss","observations")
+  return(output)
+}
+
+mhsmm_sim(n=n,n_t=n_t,m=m,n_dep=n_dep,emiss=emiss,gamma=gamma,gamma_ss_var=gamma_ss_var,emiss_ss_var=emiss_ss_var,dwell_distr=dwell_distr)
 
 ```
 
