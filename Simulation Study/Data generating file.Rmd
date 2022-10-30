@@ -1,0 +1,132 @@
+---
+title: "Multilevel EDHMM Simulation Study: data generation"
+author: "Aleksandra Dacko"
+date: "10/29/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this file I generate data using Explicit-duration Hidden Markov model. 
+The feature I will vary are: 
+* mean duration of hidden states,
+* number of observations per individual,
+* number of hidden states.
+```{r}
+n<-10 #subjects
+n_t<-100 #time series lenght
+m<-3
+n_dep<-1
+# the dependent variable is sadness and the states are depressive, mixed, manic so in depressive state sadness got largest mean
+gamma<-matrix(data=c(0.8,0.1,0.1,
+                     0.15,0.7,0.15,
+                     0.05,0.05,0.9),byrow = T, nrow = m)
+#let us assume emission is based on the Groningen data so we treat the 1-100 scale as continuous normally distributed. 
+emiss<-list(matrix(data=c(5,1,
+                          40,1,
+                          65,1), byrow=T,ncol=2,nrow = m))
+gamma_ss_var<-1
+emiss_ss_var<-1
+gamma[,-1]
+```
+We want the probabilities from gamma matrix to be expressed in intercept form. Also to present it in a form that the mHMMBayes package output we want the person specific data points to be transformed back to the `m * m` matrix. 
+```{r}
+int_to_prob<-function(alfa){
+  dim<-dim(alfa)
+  gamma<-matrix(ncol = dim[2]+1,nrow = dim[1])
+  exp_alfa<-exp(alfa)
+  exp_alfa<-cbind(rep(1,dim[1]),exp_alfa)
+  for(i in 1:dim[1]){
+    gamma[i,]<-exp_alfa[i,]/sum(exp_alfa[i,])
+  }
+  return(round(gamma,4))
+}
+prob_to_int<-function(gamma){
+  if(is.matrix(gamma)){
+    dim<-dim(gamma)
+    alfa<-matrix(ncol = dim[2]-1,nrow = dim[1])
+    for (i in 1:dim[1]) {
+      for(k in 2:dim[2]){
+        alfa[i,k-1]<-log(gamma[i,k]*(1/gamma[i,1]))
+      }
+      }
+  }
+  return(round(alfa,4))
+}
+#little check if I can recover the same probability matrix
+gamma1<-matrix(data=c(0.8,0.1,0.1,
+                     0.15,0.7,0.15,
+                     0.05,0.05,0.9),byrow = T, nrow = 2)
+prob_to_int(gamma1)
+new<-prob_to_int(gamma1)
+new_gamma<-int_to_prob(new)
+new_gamma
+new_gamma==gamma1
+```
+We prepare the output object
+```{r}
+output<-list(rep(list(NULL), n), #gamma
+             as.matrix(cbind(rep(1:n, each = n_t),rep(NA,n_t*n))),#states
+             rep(list(vector("list", n_dep)), n),#emiss
+             cbind(rep(1:n, each = n_t),matrix(rep(NA,n_t*n*n_dep), ncol= n_dep) )#observations
+             )
+names(output) <- c("ss_gamma","states", "ss_emiss","observations")
+
+#we probably don't need the dwell time distribution parameters for all subjects since for now we assume that the dwell time is fixed across subjects for each state?
+```
+We start our simulation 
+```{r}
+mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var){
+  #define output lists
+  gamma_ss<-rep(list(NULL), n)
+  state_sequence<-as.matrix(cbind(rep(1:n, each = n_t),rep(NA,n_t*n)))
+  emiss_ss<-rep(list(vector("list", n_dep)), n)
+  obv_ss<-cbind(rep(1:n, each = n_t),matrix(rep(NA,n_t*n*n_dep), ncol= n_dep))
+  #change the form of a transition matrix
+  gamma_int<-prob_to_int(gamma)
+  for(subj in 1:n){
+    #generate a set of subject specific transition matrices we introduce random subject-specific effect to the intercepts 
+    gamma_ss[[subj]]<-int_to_prob(gamma_int+rnorm(n=m*(m-1),mean=0,sd=sqrt(gamma_ss_var)))
+    for(dep in 1:n_dep){
+      #generate subject specific means of emission distributions of dependent variables,we introduce random subject-specific effect which is deviation from the mean of normally conditionally distributed mean
+      emiss_ss[[subj]][[dep]] <- emiss[[dep]]
+      emiss_ss[[subj]][[dep]][,1]<-matrix(emiss[[n_dep]][,1]+rnorm(n=m,mean = 0,sd=sqrt(emiss_ss_var)),nrow=m)
+    }
+    #now we want to find a starting state to evaluate the state sequence 
+    init <- solve(t(diag(m) - gamma_ss[[subj]] + 1), rep(1, m))
+    #there were many ways to do so :
+    #The approach from here https://stephens999.github.io/fiveMinuteStats/stationary_distribution.html
+      #A <-  rbind(t(diag(m) - gamma_ss[[subj]]), rep(1, m))
+      #b <- c(rep(0, m),1)
+      #init <- qr.solve(A, b)
+    #the approach with eigonvectors would also work 
+      #e <- eigen(t(gamma_ss[[subj]]))$vectors[, 1]
+      #e / sum(e)
+    
+    #for each subject we sample the initial state 
+    state_sequence[subj*n_t-n_t+1,2]<-sample(x = 1:m, size = 1, prob = init)
+    for(dep in 1:n_dep){
+      obv_ss[subj*n_t-n_t+1,n_dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],2]) )
+    }
+    #now we evaluate the rest of the subject specific observations  
+    for(t_occ in 2:n_t){
+      #states sequen
+      state_sequence[subj*n_t-n_t+t_occ,2]<-sample(x = 1:m, size = 1, prob =
+                                                     gamma_ss[[subj]][state_sequence[subj*n_t-n_t+t_occ-1,2],])
+      #for each subject we sample the mean emission 
+      for(dep in 1:n_dep){
+      obv_ss[subj*n_t-n_t+t_occ,n_dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],2]) )
+    }
+    }
+}
+  output<-list(gamma_ss,state_sequence,state_sequence,obv_ss)
+  names(output) <- c("gamma_ss","states", "emiss_ss","observations")
+  return(output)
+}
+
+mhsmm_sim(n=n,n_t=n_t,m=m,n_dep=n_dep,emiss=emiss,gamma=gamma,gamma_ss_var=gamma_ss_var,emiss_ss_var=emiss_ss_var)
+
+```
+
