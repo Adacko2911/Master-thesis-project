@@ -1,0 +1,72 @@
+---
+title: "Plots"
+author: "Aleksandra Dacko"
+date: "11/24/2022"
+output: html_document
+---
+
+Here I have created the plot function for dwell time duration
+```{r, warning=FALSE}
+library(ggplot2)
+library(RColorBrewer)
+set.seed(123)
+plot_lognorm<-function(m, means, sd=2){
+  sdlog<-sd
+  meanlog<-sort(means)
+  col<-brewer.pal(m, name='Dark2')
+  data<-density(rlnorm(20000, log(meanlog[1]), logsqrt((sdlog))),from=-1,to=150)
+  data<-data.frame(x=data$x,y=data$y)
+  plot<-ggplot(data=data,aes(x=x,y=y))+geom_line(color=col[1],size=1)+theme_minimal()+ylab("density")+xlab("duration distribution")+ggtitle("State dependent lognormal distribution")+xlim(c(0,100))
+  for(s in 2:m){
+    data<-density(rlnorm(20000, log(meanlog[s]), logsqrt((sdlog))),from=-1,to=150)
+    data<-data.frame(x=data$x,y=data$y)
+    plot<-plot+geom_line(data=data,aes(x=x,y=y),color=col[s],size=1)
+  }
+  return(plot)
+}
+
+set.seed(123)
+data<-density(rlnorm(20000, log(15), sqrt(log(25))),from=-1,to=150)
+set.seed(123)
+data1<-density(rlnorm(20000, log(15), log(sqrt(25))),from=-1,to=150)#it is than correct
+set.seed(123)
+data2<-density(rlnorm(20000, log(15), log(5)),from=-1,to=150)
+
+plot_lognorm(m=3,means=c(10,15,40),sd=2.5)
+plot_lognorm(m=3,means=c(10,15,40),sd=25)
+
+```
+
+
+```{r}
+#overlapping distribution plots
+library(ggplot2)
+library(RColorBrewer)
+thm<-theme(
+  axis.text.x = element_blank(),
+  axis.text.y = element_blank(),
+  axis.ticks = element_blank(),
+  axis.title.x =element_blank(),
+  axis.title.y = element_blank(),
+  axis.line = element_line(colour = "black",size = 2),
+  panel.background =element_blank())
+col<-brewer.pal(3, name='Dark2')
+data<-density(rlnorm(30000, log(5), log(10)),from=-1,to=100)
+data<-data.frame(x=data$x,y=data$y)
+data1<-density(rlnorm(30000, log(15), log(10)),from=-1,to=100)
+data1<-data.frame(x=data1$x,y=data1$y)
+data2<-density(rlnorm(30000, log(25), log(10)),from=-1,to=100)
+data2<-data.frame(x=data2$x,y=data2$y)
+p1<-ggplot(data=data,aes(x=data$x,y=data$y))+geom_line(color=col[1],size=3)+
+  geom_line(data=data1,aes(x=x,y=y),color="grey",size=3)+
+  geom_line(data=data2,aes(x=x,y=y),color="grey",size=3)+thm+xlim(c(0,70))
+ggsave(file="logs_ex1.svg", plot=p1, width=10, height=8)
+p2<-ggplot(data=data1,aes(x=data1$x,y=data1$y))+geom_line(color=col[2],size=3)+
+  geom_line(data=data,aes(x=x,y=y),color="grey",size=3)+
+  geom_line(data=data2,aes(x=x,y=y),color="grey",size=3)+thm+xlim(c(0,70))
+ggsave(file="logs_ex2.svg", plot=p2, width=10, height=8)
+p3<-ggplot(data=data2,aes(x=x,y=y))+geom_line(color=col[3],size=3)+
+  geom_line(data=data1,aes(x=x,y=y),color="grey",size=3)+
+  geom_line(data=data,aes(x=x,y=y),color="grey",size=3)+thm+xlim(c(0,70))
+ggsave(file="logs_ex3.svg", plot=p3, width=10, height=8)
+```

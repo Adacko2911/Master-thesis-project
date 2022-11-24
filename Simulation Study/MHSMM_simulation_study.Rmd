@@ -1,0 +1,217 @@
+---
+title: "HSMM simulation"
+author: "Aleksandra Dacko"
+date: "10/31/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(R.utils)
+
+```
+
+We want the probabilities from gamma matrix to be expressed in intercept form. Also to present it in a form that the mHMMBayes package output we want the person specific data points to be transformed back to the `m * m` matrix. 
+```{r}
+int_to_prob<-function(alfa){
+  dim<-dim(alfa)
+  gamma<-matrix(ncol = dim[2]+1,nrow = dim[1])
+  exp_alfa<-exp(alfa)
+  exp_alfa<-cbind(rep(1,dim[1]),exp_alfa)
+  for(i in 1:dim[1]){
+    gamma[i,]<-exp_alfa[i,]/sum(exp_alfa[i,])
+  }
+  return(round(gamma,4))
+}
+prob_to_int<-function(gamma){
+  gamma<-gamma+0.00001
+  if(is.matrix(gamma)){
+    dim<-dim(gamma)
+    alfa<-matrix(ncol = dim[2]-1,nrow = dim[1])
+    for (i in 1:dim[1]) {
+      for(k in 2:dim[2]){
+        alfa[i,k-1]<-log(gamma[i,k]*(1/gamma[i,1]))
+      }
+      }
+  }
+  return(round(alfa,4))
+}
+
+
+```
+
+Here I adjusted the multilevel hidden markov model to semi hidden markov model 
+```{r}
+
+mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var,dwell_distr){
+  #define output lists
+  gamma_ss<-rep(list(NULL), n)
+  state_sequence<-as.matrix(cbind(rep(1:n, each = n_t),rep(NA,n_t*n)))
+  emiss_ss<-rep(list(vector("list", n_dep)), n)
+  obv_ss<-cbind(rep(1:n, each = n_t),matrix(rep(NA,n_t*n*n_dep), ncol= n_dep))
+  gamma_no_diag<-gamma
+  diag(gamma_no_diag)=NA
+  gamma_no_diag<-t(matrix(t(gamma_no_diag)[which(!is.na(gamma_no_diag))],nrow=nrow(gamma_no_diag)-1,ncol=ncol(gamma_no_diag)))
+  #change the form of a transition matrix
+  gamma_int<-prob_to_int(gamma_no_diag)
+  for(subj in 1:n){
+    #generate a set of subject specific transition matrices we introduce random subject-specific effect to the intercepts 
+    gamma_numeric<-as.numeric(t(int_to_prob(gamma_int+rnorm(n=m*(m-1)/2,mean=0,sd=sqrt(gamma_ss_var)))))
+    gamma_ss[[subj]]<-matrix(data=insert(gamma_numeric,seq(from=1,to=length(gamma_numeric)+1,by=m),value=rep(0,m)),byrow = T,ncol=m)
+    for(dep in 1:n_dep){
+      #generate subject specific means of emission distributions of dependent variables,we introduce random subject-specific effect which is deviation from the mean of normally conditionally distributed mean
+      emiss_ss[[subj]][[dep]] <- emiss[[dep]]
+      emiss_ss[[subj]][[dep]][,1]<-matrix(emiss[[dep]][,1]+rnorm(n=m,mean = 0,sd=sqrt(emiss_ss_var)),nrow=m)
+    }
+    
+    #for each subject we sample the initial state 
+    inst=c(1:m)
+    state_sequence[subj*n_t-n_t+1,2]<-sample(inst,1)
+    for(dep in 1:n_dep){
+      obv_ss[subj*n_t-n_t+1,dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+1,2],2]) )
+    }
+    ak=0
+    a=0
+    while(ak<n_t){
+      #now we evaluate the dwell time based on first state   
+      #the row of state specific dwell time 
+      dwell_row<-state_sequence[subj*n_t-n_t+a+1,2]
+      #draw the subject specific discrete dwell time
+      mean_dwell<-round(rlnorm(1, log(dwell_distr[dwell_row,1]), log(sqrt(dwell_distr[dwell_row,2]))),0) #check
+      if(mean_dwell<=1){
+        mean_dwell=1
+        state_sequence[subj*n_t-n_t+a+2,2]<-sample(x = 1:m, size = 1, prob =
+                                  gamma_ss[[subj]][state_sequence[subj*n_t-n_t+a+1,2],]) #check (+1)
+        ak<-a+mean_dwell
+        
+      }else{
+        #condition to meet the n_t subject observations sequence length
+      if(a+mean_dwell<n_t){
+        #replete the most probable state 
+        state_given_dwell<-rep(dwell_row,mean_dwell-1)
+        #append the sequence to the observation matrix
+        for (idx in 1:length(state_given_dwell)) {
+            state_sequence[subj*n_t-n_t+1+a+idx,2]<-state_given_dwell[idx]
+        }
+        #update the a(current index in the subject specific vector of observations)
+        a<-a+mean_dwell
+        #draw a new state based on previous
+        state_sequence[subj*n_t-n_t+a+1,2]<-sample(x = 1:m, size = 1, prob =
+                                  gamma_ss[[subj]][state_sequence[subj*n_t-n_t+a,2],])
+        #update the ak (while loop condition)
+        ak<-a+1
+        #if the "if" is not met(the duration of a state is longer than the space in observation vector we add only as many observation to reach the n_t)
+        }else{
+        mean_dwell<-n_t-a
+        state_given_dwell<-rep(dwell_row,(mean_dwell-1))
+        for (idx in 1:length(state_given_dwell)) {
+            state_sequence[subj*n_t-n_t+1+a+idx,2]<-state_given_dwell[idx]
+        }
+        ak<-a+mean_dwell
+      }
+      }
+      
+    }
+      #for each subject and each state we sample the mean emission 
+      for(t_occ in 2:n_t){
+        for(dep in 1:n_dep){
+          obv_ss[subj*n_t-n_t+t_occ,dep+1]<-rnorm(n=1,mean=emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],1],sd=sqrt(emiss_ss[[subj]][[dep]][state_sequence[subj*n_t-n_t+t_occ,2],2]) )
+        }
+      }
+  }
+  #the output is return here 
+  output<-list(gamma_ss,state_sequence,emiss_ss,obv_ss)
+  names(output) <- c("gamma_ss","states", "emiss_ss","observations")
+  return(output)
+}
+```
+
+Now we build the simulation function that takes into account different input to mhsmm_sim()
+
+The feature to vary are: 
+* mean duration of hidden states,
+* number of observations per individual,
+* number of hidden states.
+I create the criteria I will need for the function
+```{r}
+#vary the transitions over states. Vary the duration across scenarios but keep it constant accros the states.
+
+#set the seed
+set.seed(12)
+n<-10 #subjects
+n_t<-c(100,200) #time series length
+m<-c(3,2) #number of states
+
+#number of set of mean duration matrices
+md_s<-1
+#number of scenarios of the number of observations per individual
+occ_s<-2
+#number of scenarios of the number of states 
+st_s<-1
+#number of samples within the same scenario
+sampl<-100
+#We will not vary the number of dependent variable hence n_dep is of length 1 and the emiss is 1 list 
+n_dep<-2
+emiss<-list(list(matrix(data=c(5,1,
+                          40,1,
+                          65,1), byrow=T,ncol=2,nrow = m[1]),
+            matrix(data=c(10,1,
+                          15,1,
+                          70,1), byrow=T,ncol=2,nrow = m[1])))
+emiss_ss_var<-1
+#gamma is a list of length st_s 
+gamma<-list(matrix(data=c(0,0.9,0.1,
+                     0.5,0,0.5,
+                     0.2,0.8,0),byrow = T, nrow = m[1]))
+gamma_ss_var<-1
+#dwell_distr is a list of length md_s 
+dwell_distr<-list(list(matrix(data=c(5,2, 
+                          20,2,
+                          30,2), byrow=T,ncol=2,nrow = m[1])))
+state_sc_name<-c()
+nr_oc_sc_name<-c()
+meandwell_sc_name<-c()
+for(i in 1:st_s){
+  state_sc_name[i]<-paste("(states) scenario ",i, ",with m=",m[i])
+}
+for(i in 1:occ_s){
+  nr_oc_sc_name[i]<-paste("(no. occasions) scenario ",i, ",with n_t=",n_t[i])
+}
+for(i in 1:md_s){
+  meandwell_sc_name[i]<-paste("(dwell time) scenario ",i)
+}
+occ_list<-list()
+md_list<-list()
+sim_final<-list()
+list1<-list()
+#first we got a list of state number scenarios
+#----second we got number of samples within each person scenarios
+#----------third we got list of state specific means scenarios
+#----------------forth we got multiple samples of 1 of the scenarios
+#----------------------fifth each sample consist of output of mhsmm_sim()
+for (st in 1:st_s) {
+  stat<-m[st]
+  gam<-gamma[[st]]
+  em<-emiss[[st]]
+  for(occ in 1:occ_s){
+    n_occ<-n_t[occ]
+    for(md in 1:md_s){
+      dwel<-dwell_distr[[st]][[md]]
+      for (iter in 1:sampl) {
+        list1[[iter]]<-mhsmm_sim(n=n,n_t=n_occ,m=stat,n_dep=2,emiss=em,gamma=gam ,gamma_ss_var=gamma_ss_var,emiss_ss_var=emiss_ss_var,dwell_distr=dwel)
+        }
+      md_list[[md]]<-list1
+      list1<-list()
+    }
+    names(md_list)<-meandwell_sc_name
+    occ_list[[occ]]<-md_list
+    md_list<-list()
+  }
+  names(occ_list)<-nr_oc_sc_name
+  sim_final[[st]]<-occ_list
+  occ_list<-list()
+
+}
+names(sim_final)<-state_sc_name
+
+```
