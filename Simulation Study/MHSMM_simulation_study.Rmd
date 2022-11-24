@@ -128,6 +128,21 @@ mhsmm_sim<-function(n,n_t,m,n_dep,emiss,gamma,gamma_ss_var,emiss_ss_var,dwell_di
 
 Now we build the simulation function that takes into account different input to mhsmm_sim()
 
+Calculation of overlap of subject-specific dependent variable distributions
+```{r}
+#The Kolmogorov-Smirnov test statistics for dependent variable subject-specific distributions (for samples)
+#D=0 indicates the distributions are identical and 1 indicates no overlap.
+ks.test(rnorm(20000, mean=10,sd=5),rnorm(20000, mean=45,sd=5))
+#integrating out is also an option 
+int_f <- function(x, mu1, mu2, sd1, sd2) {
+  f1 <- dnorm(x, mean=mu1, sd=sd1)
+  f2 <- dnorm(x, mean=mu2, sd=sd2)
+  pmin(f1, f2)
+}
+integrate(int_f, -Inf, Inf, mu1=10, mu2=45, sd1=5, sd2=5)
+#it measures explicitly the overlap of the two distributions
+```
+
 The feature to vary are: 
 * mean duration of hidden states,
 * number of observations per individual,
