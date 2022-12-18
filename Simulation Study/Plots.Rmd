@@ -13,15 +13,15 @@ set.seed(123)
 plot_lognorm<-function(m, means){
   meanlog<-sort(means)
   col<-brewer.pal(m, name='Dark2')
-  datay<-dlnorm(seq(0,12,0.1), meanlog=log(meanlog[1]),sdlog = 1)
+  datay<-dnorm(seq(0,100,0.1), mean = means[1],sd=2)
   med<-median(datay)
-  data<-data.frame(x=seq(0,12,0.1),y=datay)
-  plot<-ggplot(data=data,aes(x=x,y=y))+geom_line(color=col[1],size=1)+theme_bw()+ylab("density")+xlab("duration distribution")+ggtitle("EDHMM state dependent lognormal dwell time distribution ")+xlim(c(0,12))#+geom_hline(yintercept = med,color=col[1])
+  data<-data.frame(x=seq(0,100,0.1),y=datay)
+  plot<-ggplot(data=data,aes(x=x,y=y))+geom_line(color=col[1],size=2)+theme_bw()+ylab("density")+xlab("duration distribution")#+ggtitle("HMM state dependent geometric dwell time distribution ")+xlim(c(0,12))#+geom_hline(yintercept = med,color=col[1])
   for(s in 2:m){
-    datay<-dlnorm(seq(0,12,0.1),meanlog =log(meanlog[s]),sdlog = 1)
+    datay<-dnorm(seq(0,100,0.1), mean = means[s],sd=2)
     med<-median(datay)
-    data<-data.frame(x=seq(0,12,0.1),y=datay)
-    plot<-plot+geom_line(data=data,aes(x=x,y=y),color=col[s],size=1)#+geom_hline(yintercept = med,color=col[s])
+    data<-data.frame(x=seq(0,100,0.1),y=datay)
+    plot<-plot+geom_line(data=data,aes(x=x,y=y),color=col[s],size=2)#+geom_hline(yintercept = med,color=col[s])
   }
   return(plot)
 }
@@ -33,8 +33,8 @@ data1<-density(rlnorm(20000, log(15), log(sqrt(25))),from=-1,to=150)#it is than 
 set.seed(123)
 data2<-density(rlnorm(20000, log(15), log(5)),from=-1,to=150)
 
-plot_lognorm(m=3,means=c(0.9,0.7,0.5))
-plot_lognorm(m=3,means=c(6.5,6,5.5))
+plot_lognorm(m=3,means=c(10,40,80))
+plot_lognorm(m=3,means=c(10.49573,3.476059,1.442695))
 
 ```
 
@@ -52,22 +52,22 @@ thm<-theme(
   axis.line = element_line(colour = "black",size = 2),
   panel.background =element_blank())
 col<-brewer.pal(3, name='Dark2')
-data<-density(rlnorm(30000, log(5), log(10)),from=-1,to=100)
-data<-data.frame(x=data$x,y=data$y)
-data1<-density(rlnorm(30000, log(15), log(10)),from=-1,to=100)
-data1<-data.frame(x=data1$x,y=data1$y)
-data2<-density(rlnorm(30000, log(25), log(10)),from=-1,to=100)
-data2<-data.frame(x=data2$x,y=data2$y)
-p1<-ggplot(data=data,aes(x=data$x,y=data$y))+geom_line(color=col[1],size=3)+
+data<-dnorm(seq(0,100,0.1), mean = 10,sd=4)
+data<-data.frame(x=seq(0,100,0.1),y=data)
+data1<-dnorm(seq(0,100,0.1), mean =39,sd=4)
+data1<-data.frame(x=seq(0,100,0.1),y=data1)
+data2<-dnorm(seq(0,100,0.1), mean = 80,sd=4)
+data2<-data.frame(x=seq(0,100,0.1),y=data2)
+p1<-ggplot(data=data,aes(x=x,y=y))+geom_line(color=col[1],size=4)+
   geom_line(data=data1,aes(x=x,y=y),color="grey",size=3)+
-  geom_line(data=data2,aes(x=x,y=y),color="grey",size=3)+thm+xlim(c(0,70))
+  geom_line(data=data2,aes(x=x,y=y),color="grey",size=3)+thm
 ggsave(file="logs_ex1.svg", plot=p1, width=10, height=8)
-p2<-ggplot(data=data1,aes(x=data1$x,y=data1$y))+geom_line(color=col[2],size=3)+
+p2<-ggplot(data=data1,aes(x=data1$x,y=data1$y))+geom_line(color=col[2],size=4)+
   geom_line(data=data,aes(x=x,y=y),color="grey",size=3)+
-  geom_line(data=data2,aes(x=x,y=y),color="grey",size=3)+thm+xlim(c(0,70))
+  geom_line(data=data2,aes(x=x,y=y),color="grey",size=3)+thm
 ggsave(file="logs_ex2.svg", plot=p2, width=10, height=8)
-p3<-ggplot(data=data2,aes(x=x,y=y))+geom_line(color=col[3],size=3)+
+p3<-ggplot(data=data2,aes(x=x,y=y))+geom_line(color=col[3],size=4)+
   geom_line(data=data1,aes(x=x,y=y),color="grey",size=3)+
-  geom_line(data=data,aes(x=x,y=y),color="grey",size=3)+thm+xlim(c(0,70))
+  geom_line(data=data,aes(x=x,y=y),color="grey",size=3)+thm
 ggsave(file="logs_ex3.svg", plot=p3, width=10, height=8)
 ```
