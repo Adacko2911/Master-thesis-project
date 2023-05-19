@@ -1,0 +1,212 @@
+\documentclass[]{interact}
+\usepackage[utf8]{inputenc}
+ \usepackage{tabularray}
+ \usepackage{tabularray}
+\usepackage{geometry}
+\usepackage{tabu}
+\usepackage{lscape}
+\usepackage{amssymb}
+\geometry{left=1in,top=2.25in, right=1in}
+\setlength{\parindent}{0em}
+\setlength{\parskip}{1em}
+\usepackage[small,labelfont=bf,up,textfont=it,up]{caption}
+\usepackage{graphicx}
+%\usepackage{hyperref}
+%\usepackage{floatrow}
+\usepackage{datetime}
+\usepackage[english]{babel} 
+\usepackage{ragged2e}
+\newdateformat{monthyeardate}{%
+\monthname[\THEMONTH], \THEYEAR}
+\usepackage{titlesec}
+\titleformat{\section}{\bfseries}{\thesection.}{0.7em}{}
+\titleformat{\subsubsection}{}{\thesubsubsection}{1em}{\itshape}
+\usepackage[natbibapa,nodoi]{apacite}
+\setlength\bibhang{12pt}
+\renewcommand\bibliographytypesize{\fontsize{10}{12}\selectfont}
+\usepackage{multirow,booktabs,setspace,caption}
+\usepackage{tikz}
+
+\DeclareCaptionLabelSeparator*{spaced}{\\[2ex]}
+\captionsetup[table]{textfont=it,format=plain,justification=justified,
+  singlelinecheck=false,labelsep=spaced, skip=0pt}
+  \DeclareCaptionLabelSeparator*{spaced}{\\[2ex]}
+\captionsetup{labelfont=bf, textfont={it,small}, labelsep=newline,
+              justification=raggedright, singlelinecheck=false}
+\usepackage[longnamesfirst,sort]{natbib}% Citation support using natbib.sty
+\renewcommand\bibfont{\fontsize{10}{12}\selectfont}% To set the list of references in 10 point font using natbib.sty
+\usepackage{acro}
+\DeclareAcronym{hmm}{
+short=HMM,
+long=Hidden Markov Model,
+}
+\DeclareAcronym{hsmm}{
+short=HSMM,
+long= Hidden Semi-Markov Model,
+}
+\DeclareAcronym{edhmm}{
+  short=EDHMM,
+  long= Explicit Duration Hidden Markov Model,
+}
+\DeclareAcronym{mhmm}{
+  short=MHMM,
+  long=Multilevel Hidden Markov Model,
+}
+\DeclareAcronym{mhsmm}{ 
+  short=MHSMM,
+  long=Multilevel Hidden Semi-Markov Model,
+}
+\DeclareAcronym{medhmm}{
+  short=MEDHMM,
+  long= Multilevel Explicit-duration Hidden Markov Model,
+}
+\DeclareAcronym{ild}{ 
+  short=ILD,
+  long=Intensive Longitudinal Data,
+}
+
+\title{
+\vspace{-3cm}
+\raggedright{
+\fontsize{14pt}{14pt}\selectfont
+Research Master’s programme Methodology and Statistics for the
+Behavioural, Biomedical and Social Sciences \\
+Utrecht University, the Netherlands\\
+\vspace{4\baselineskip}
+MSc Thesis Aleksandra Dacko (2321068)\\ \vspace{0.3cm}
+TITLE: Should you make the Explicit-duration Hidden Markov Model your asset when analysing intensive longitudinal data for behavioural research?\\ \vspace{0.3cm} 
+May, 2023\\ 
+\vspace{4\baselineskip}
+Supervisors:\\ \vspace{0.3cm}
+Dr. Emmeke Aarts (Utrecht University) \\
+Sebastian Mildiner Moraga (Utrecht University) \\
+\vspace{2\baselineskip}
+Second grader:\\ \vspace{0.3cm}
+Dr. Gerko Vink (Utrecht University)\\ 
+\textsc{}\\
+Preferred journal of publication: Multivariate Behavioural Research\\ \vspace{0.3cm}
+Word count: 10500\\
+\date{}
+\thispagestyle{empty}
+}
+}
+\begin{document}
+
+\maketitle  
+\thispagestyle{empty} 
+
+%%%%%%%%%%% FK
+
+\clearpage
+\newpage
+\newgeometry{left=0.9in,top=1in}
+\subsection*{Abstract}
+\input{sections/abstract}\\ \\
+\textbf{KEYWORDS}\\
+Hidden Semi-Markov models, Explicit-duration Hidden Markov models Hidden Markov models, multilevel modelling, intensive longitudinal data, continuous data,
+Bayesian statistics, Monte Carlo studies, individual random effects
+\section{Introduction}
+\input{sections/introduction}
+
+
+\input{sections/models}
+
+\section{Simulation Study}
+\input{sections/sim_study.tex}
+ \section{Empirical example of MEDHMM use: Bipolar disorder EMA data}
+ \input{sections/empirical_example.tex}
+\section{Discussion}
+\input{sections/discussion.tex}
+\section{Conclusions}
+\input{sections/conclusions.tex}
+\section*{Ethical Approval}
+The study was approved by the Ethical Review Board of the Faculty of Social and Behavioural Sciences of Utrecht University (ref.no 22-1845 and 22-1844).
+\section*{Data availability statement}
+The data that support the findings for the bipolar disorder example are available from upon reasonable request to University Medical Center Groningen (UMCG).
+\section*{Supplementary materials}
+All code used for the analysis has been stored in GitHub repository and is open to access via the link: \url{https://github.com/a-dacko/MEDHMM\_vs\_MHMM}.
+\section*{Funding}
+This work made use of the Dutch national e-infrastructure Snellius with the support of the
+SURF Cooperative using grant no. EINF-2570, which is (partly) financed by the Dutch
+Research Council (NWO).
+
+\printacronyms[name=Abbreviations]
+
+\bibliographystyle{apacite}
+\bibliography{citations/references}
+
+\section{Appendices}
+\appendix
+\section{Data simulation: Supplementary materials}
+\begin{figure}[h]
+\caption{\\Emission distributions for each of the state scenarios.} \centering
+\includegraphics[width=0.75\textwidth]{graphics/emiss_dist_plot.pdf}
+\label{em_ds}
+\end{figure}
+
+\begin{figure}[h]
+\caption{\\Assumed dwell time distributions}
+\centering
+\includegraphics[width=0.7\textwidth]{graphics/lognorm_dist_plot.pdf}
+\flushleft
+\footnotesize
+Three dwell time distributions used in the simulation study, with median dwell times ${d\in\{1.4,3.5,19.5,99.5\}}$\\
+\label{log_ds}
+\end{figure}
+
+\begin{table}[h]
+\caption{Emission distribution priors used in simulation study}
+\centering
+\resizebox{0.75\linewidth}{!}{
+\begin{tabular}{p{0.15\textwidth}p{0.35\textwidth}p{0.3\textwidth}}
+
+\toprule
+\multicolumn{1}{c}{\textbf{Parameter}} & \multicolumn{1}{c}{\textbf{Description}} & \multicolumn{1}{c}{\textbf{Value}} \\
+\midrule
+\multicolumn{1}{c}{$\mu_{10},\mu_{20}$} & The hypothesized mean values of the Normal emission distributions in each of the states for each dependent variable.& \multicolumn{1}{c}{$\{10,30,60,98\}$, $\{98,60,30,10\}$} \\
+\multicolumn{1}{c}{$\kappa_0$} & The number of hypothetical prior subjects on which the means $\mu_{10}$ and $\mu_{20}$ are based on. & \multicolumn{1}{c}{$1$}\\
+\multicolumn{1}{c}{$u$} & The degree of freedom of the Inverse Gamma hyper-prior distribution connected to the emission distribution means. & \multicolumn{1}{c}{$1$} \\
+\multicolumn{1}{c}{$V$} & The hypothesized variances between the subject-level means of the Inverse Gamma hyper-prior distribution connected to the emission distribution means. & \multicolumn{1}{c}{$100$}  \\
+\multicolumn{1}{c}{$\alpha_0$} & The shape parameter value of the Inverse Gamma hyper-prior on each of fixed variances of the Normal emission distributions & \multicolumn{1}{c}{$0.001$}\\
+\multicolumn{1}{c}{$\beta_0$} & The scale parameter values of the Inverse Gamma hyper-prior on each of fixed variances of the Normal emission distributions & \multicolumn{1}{c}{$0.001$} \\
+\bottomrule
+\label{Ap_emiss_hp}
+\end{tabular}}
+\end{table}
+
+\begin{table}[h]
+\caption{Dwell time distribution priors used in simulation study}
+\centering
+\resizebox{0.75\linewidth}{!}{
+\begin{tabular}{p{0.15\textwidth}p{0.35\textwidth}p{0.3\textwidth}}
+\toprule
+\multicolumn{1}{c}{\textbf{Parameter}} & \multicolumn{1}{c}{\textbf{Description}} & \multicolumn{1}{c}{\textbf{Value}} \\
+\midrule
+\multicolumn{1}{c}{$\mu_{[d]0}$} & The hypothesized mean values of the log-Normal dwell distribution for each of the states in the logarithmic scale. & \multicolumn{1}{c}{$\{1.4, 3.5,19.5,99.5\}$} \\
+\multicolumn{1}{c}{$s^2_0$} & The hypothesized variances between the between-subject level means of the Inverse Gamma hyper-prior distribution connected to the dwell distribution log-means. & \multicolumn{1}{c}{$10$} \\
+\multicolumn{1}{c}{$\alpha_{\sigma^20}$} & The shape values of the Inverse Gamma hyper-prior on each of fixed variances of the log-Normal dwell distribution.
+& \multicolumn{1}{c}{$0.01$} \\
+\multicolumn{1}{c}{$\beta_{\sigma^20}$} & The scale values of the Inverse Gamma hyper-prior on each of fixed variances of the log-Normal dwell distribution. & \multicolumn{1}{c}{$0.01$} \\
+\multicolumn{1}{c}{$\alpha_{\tau^20}$} & The shape values of the Inverse Gamma hyper-prior on each of the between-subject variances of the Normal prior on the dwell distribution. & \multicolumn{1}{c}{$0.01$}\\
+\multicolumn{1}{c}{$\beta_{\tau^20}$} & The scale values of the Inverse Gamma hyper-prior on each of the between-subject variances of the Normal prior on the dwell distribution. & \multicolumn{1}{c}{$0.01$}\\
+\bottomrule 
+\label{Ap_dwell_hp}
+\end{tabular}}
+\end{table}
+
+% \subsubsection{Empirical Example}
+
+
+\include{sections/appendix_sim_sel}
+
+
+%\include{sections/ax_mixed_scenario}
+
+
+
+
+\include{sections/appendix_empirical_example_ppc}
+\include{sections/appendix_empirical_example}
+\include{sections/appendix_tig}
+
+\end{document}

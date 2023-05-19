@@ -1,0 +1,58 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=128
+#SBATCH --partition=fat
+#SBATCH --time=100:00:00
+
+cd $HOME/medhmm_run
+
+# adjust the name of folder on previous line
+
+module purge
+module load 2021
+module load Stopos/0.93-GCC-10.3.0
+
+# put the name of the pool in the environment variable
+# STOPOS_POOL
+
+export STOPOS_POOL=poolset12
+
+# determine the number of cores available on the node the job is running on:
+
+datadir=$HOME/medhmm_run
+
+# start as many doit's as there are cores, every doit will start an instance:
+
+for ((i=1; i<=1; i++)) ; do
+(
+
+# if stopos lines available launch jobs
+  while true ; do
+
+# get a line form the pool:
+    stopos next
+
+# test if we got a line. If not: leave the loop
+    if [ "$STOPOS_RC" != "OK" ]; then
+      break
+    fi
+
+# call the doit script, using the line we just got from stopos ($STOPOS_VALUE)
+
+    echo STOPOS_VALUE: $STOPOS_VALUE
+
+    $HOME/medhmm_run/doit12 $STOPOS_VALUE
+
+# remove the line we used
+
+    stopos remove
+
+  done
+
+# put this commands in the background: hence the & :
+) &
+done
+
+# wait until all background processes are done
+wait

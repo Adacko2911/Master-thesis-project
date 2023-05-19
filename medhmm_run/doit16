@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# see https://surfsara.nl/systems/lisa/software/stopos-example-1
+
+module load 2021
+module load R/4.1.0-foss-2021a
+export MKL_NUM_THREADS=128  # to avoid that jobs compete for cores
+export R_LIBS=$HOME/rpackages:$R_LIBS   # Refer to the folder where you
+                                        # have stored your R libraries
+
+case=$*                                 # case refers to the line in your parmex1 file
+casearray=(${case})                     # Denote that these are multiple numbers on each line (i.e., array)
+
+# IMPORTANT
+# The first entry of the array is referred to as 0 in unix (but not in the R-script!)
+# so here we have entries 0,1,2,3, not 1,2,3,4!!
+
+
+# The name of the file containing your R-script
+jobfile=model_fitting2_and_post_processes_extra_run.R
+
+
+# The name of the expected outputfile of a particular run
+outfile=out_list1.rds
+
+# Specify the folders where your R-script/data are
+#  and where the results need to be written to
+datadir=$HOME/medhmm_run
+outdir=$HOME/medhmm_run/output
+
+
+# Copy the job to a temporary folder in which the job is run
+cp $datadir/$jobfile "$TMPDIR"
+cd $TMPDIR || exit
+
+# Run R:
+# note that the 4 entries of each line of the parmex1 file
+# are fed to R in the command line
+# see also
+Rscript --slave --no-save $jobfile ${case}
+
+# copy the output files back to the out-directory:
+mv $outfile $outdir

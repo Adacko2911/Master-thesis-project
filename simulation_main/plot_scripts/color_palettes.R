@@ -1,0 +1,23 @@
+colors=tibble(blue="#5778a4",
+              orange="#e49444",
+              red="#d1615d",
+              teal="#85b6b2",
+              green="#6a9f58",
+              yellow="#e7ca60",
+              purple="#a87c9f",
+              pink="#f1a2a9",
+              brown="#967662",
+              grey="#b8b0ac")
+my_grey_text="#696969"
+gamam_colors=tibble(blue1="#1ba3c6",
+                    blue2="#98DF8A",
+                    blue4="#33a65c",
+                    green1="#9c8847",
+                    green2="#a2b627",
+                    green4="#f89217",
+                    red1="#e03426",
+                    red2="#ae2885",
+                    red4="#eb73b3",
+                    purple1="#bcb0d8",
+                    purple2="#a26dc2",
+                    purple4="#130443")

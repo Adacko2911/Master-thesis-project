@@ -1,0 +1,33 @@
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=96
+#SBATCH --partition=fat
+#SBATCH --time=60:00:00
+
+cd $HOME/convergence_run/mhmm
+
+# adjust the name of folder on previous line
+
+module purge
+module load 2021
+module load Stopos/0.93-GCC-10.3.0
+
+
+# determine the number of cores available on the node the job is running on:
+
+datadir=$HOME/convergence_run/mhmm
+
+# start as many doit's as there are cores, every doit will start an instance:
+
+for ((i=1; i<=1; i++)) ; do
+(
+
+    $HOME/convergence_run/mhmm/doit 
+
+# put this commands in the background: hence the & :
+) &
+done
+
+# wait until all background processes are done
+wait
