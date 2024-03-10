@@ -12,7 +12,7 @@ In the following research archive you can find the following folders[^1]:
 ```
 MHMM_vs_MEDHMM/
 ├── README.md
-├── Session_info.txt - includes information regarding all packages loaded duering the analysis as well as the R software specifications
+├── Session_info.txt - includes information regarding all packages loaded during the analysis as well as the R software specifications
 ├── data/
 │   ├── data_simulation.R - simulated data generating script
 │   └── read_me.txt  - description of the data files that should be included
@@ -49,10 +49,10 @@ MHMM_vs_MEDHMM/
 │    └── parameters/ - folder including all parameters of the simulation scenarios that are further passed to snellius engine
 │
 ├── simulation_main/
-│    ├── parse outputs.R - script parsing outputs included in mhmm_run/outputs/ and medhmm_run/outputs/ that saves the final post processed files in simulation_main/post_processed_data/
+│    ├── parse outputs.R - script parsing outputs included in mhmm_run/outputs/ and medhmm_run/outputs/ that saves the final post-processed files in simulation_main/post_processed_data/
 │    ├── plot_scripts/ - includes three files that generate the plots that are further used in the manuscript 
 │    ├── outputs plots/ - includes all plots generate by the scripts included in simulation_main/plot_scripts/
-│    └── post_processed_data/ include final outputs that are further used for table generating and plot building. Main Results.xlsx inluded in this folder has been manually parsed and included for and easy overview.
+│    └── post_processed_data/ include final outputs that are further used for table generating and plot building. Main Results.xlsx included in this folder has been manually parsed and included for and easy overview.
 │
 ├── manuscript/ - includes all laTeX files and graphics that were used to generate the manuscript of the thesis
 │
@@ -62,7 +62,7 @@ MHMM_vs_MEDHMM/
     ├── train_models.R - code to train both MEDHMM and MHMM with a use of the empirical data
     ├── models_postprocess.R - scripts generating trace plots and other statistics reported in main manuscript. In addition includes code to generate figures 9, 10, 12, C4. Also includes script to simulate data for the posterior predictive checks 
     ├── summarise_data.R - scripts summarizing in sample data to obtain the group-level and patient-level statistics. The data is further used for the posterior predictive checks 
-    ├── utility_functions.R - script including function to summaries, simulate and plot data
+    ├── utility_functions.R - script including a function to summariese, simulate and plot data
     ├── ppc_mean_code.R - code to generate the plots of the posterior predictive checks i.e. figures C1 and C2 from the manuscript
     └── decoding_figures_11_C5.R - script generation figures 11 and C5 from the manuscript
 
@@ -73,26 +73,34 @@ MHMM_vs_MEDHMM/
 
 To reproduce the results of the study, follow these steps:
 
-1. Download the code in the `convergence_run`,`example`,`medhmm_run`,`mhmm_run` and `data` folder and the empirical data (upon request from Groningen Medical centre).
+1. Download the code in the `convergence_run`,`example`,`medhmm_run`,`mhmm_run` and `data` folder and the empirical data (upon request from Groningen Medical Centre).
 2. Run the R scripts in the following order to reproduce the results from main simulation study:
     1. `data/data_simulation.R`: simulate the data.
     2. `convergence_run/medhmm/convergence_run_medhmm1.R`,`convergence_run/medhmm/convergence_run_medhmm2.R`, `convergence_run/mhmm/convergence_runs.R` : analyse the convergence results from fitting the Bayesian multilevel EDHMM and HMM on the simulated data.
     3. R (.R) scripts included in `medhmm_run/` and `mhmm_run/` directories: run the simulation.
     4. `simulatipon_main/parse_outputs.R`: summarize and parse all results. (results `produced to ./post_processed_data/`).
     5. R (.R) scripts included in `simulatipon_main/plot_scripts/`directory: produce figures (results `./produced to plot_scripts/`).
-3. Run the R scripts in the following order to reproduce the results from empirical exmple:
+3. Run the R scripts in the following order to reproduce the results from empirical example:
     1. `example/train_models.R`: fit the data to MEDHMM and the MHMM.
     2. `example/summarise_data.R`: get the summary statistics of individuals and study group.
     3. `example/utility_functions.R`: load functions needed.
     4. `example/models_postprocess.R`: summarize data results, produce plots and convergence trace plots.
     5. `example/decoding_figures_11_C5.R` and `example/ppc_mean_code.R`: to obtain figures and posterior predictive check analisys results.
   
-Notice that the simulation is computationally intensive; it was run in the [Dutch National Supercomputer Snellius](https://www.surf.nl/en/dutch-national-supercomputer-snellius) using a single node with varying number of cores. The cluster computer scripts are available in `convergence_run/medhmm/`, `convergence_run/mhmm/`,`medhmm_run/`, and `mhmm_run/` and consists of the **job** files, **doit** files and executable **.sh** files. Those files can be reuse however they need to be adjusted in order to mach future user file directories. 
+Notice that the simulation is computationally intensive; it was run in the [Dutch National Supercomputer Snellius](https://www.surf.nl/en/dutch-national-supercomputer-snellius) using a single node with varying number of cores. The cluster computer scripts are available in `convergence_run/medhmm/`, `convergence_run/mhmm/`,`medhmm_run/`, and `mhmm_run/` and consist of the **job** files, **doit** files and executable **.sh** files. Those files can be re-used however they need to be adjusted to match future user file directories. 
 
+## Ethical Approval
+The study was approved by the Ethical Review Board of the Faculty of Social and Behavioural
+Sciences of Utrecht University (ref.no 22-1845 and 22-1844).
 
+## Funding
+This work made use of the Dutch national e-infrastructure Snellius with the support of the
+SURF Cooperative using grant no. EINF-2570, which is (partly) financed by the Dutch Research Council (NWO)
 
-## Contact
+## Data availability statement
 
 The empirical data cannot be found in this repository due to privacy issues. However, the data can be made available upon reasonable request from researchers. Please contact <f.m.bos01@umcg.nl> for more information.
+
+## Contact
 
 For any further questions, please contact <a.dacko@students.uu.nl>.
